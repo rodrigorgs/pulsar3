@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="19" height="14" tilewidth="21" tileheight="21" nextobjectid="11">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="19" height="14" tilewidth="21" tileheight="21" nextobjectid="17">
  <tileset firstgid="1" name="spritesheet" tilewidth="21" tileheight="21" spacing="2" margin="2" tilecount="900" columns="30">
   <image source="spritesheet.png" width="692" height="692"/>
+ </tileset>
+ <tileset firstgid="901" name="debug" tilewidth="147" tileheight="147" tilecount="1" columns="1">
+  <image source="tower8.png" width="147" height="147"/>
  </tileset>
  <layer name="frente" width="19" height="14">
   <data encoding="csv">
@@ -40,9 +43,11 @@
 </data>
  </layer>
  <objectgroup name="Objetos">
-  <object id="6" gid="235" x="254" y="105" width="21" height="21"/>
-  <object id="7" gid="235" x="168" y="106" width="21" height="21"/>
-  <object id="8" name="player" gid="171" x="209" y="189" width="21" height="21"/>
+  <object id="6" gid="235" x="252" y="105" width="21" height="21"/>
+  <object id="7" gid="235" x="168" y="105" width="21" height="21"/>
+  <object id="8" name="player" gid="171" x="210" y="189" width="21" height="21"/>
   <object id="10" gid="311" x="210" y="41" width="21" height="21"/>
+  <object id="14" gid="901" x="105" y="168" width="147" height="147"/>
+  <object id="16" gid="901" x="189" y="168" width="147" height="147"/>
  </objectgroup>
 </map>

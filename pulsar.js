@@ -8,7 +8,9 @@
 // - TODO: Ride the bullet to become closer of the targets
 // - When the player is caught, she can deattach by moving away from the bullet
 
-FIRST_LEVEL = 1;
+FIRST_LEVEL = 4;
+
+TILESIZE = 21;
 
 FRAMES = {
   PLAYER: 171,
@@ -63,7 +65,7 @@ Scene.Game.prototype = {
     game.load.audio('hit', 'assets/hit.wav');
 
     game.load.tilemap('fase' + this.params.level, 'assets/fase' + this.params.level + '.json', null, Phaser.Tilemap.TILED_JSON);
-    game.load.spritesheet('spritesheet', 'assets/spritesheet.png', 21, 21, -1, 2, 2);
+    game.load.spritesheet('spritesheet', 'assets/spritesheet.png', TILESIZE, TILESIZE, -1, 2, 2);
 
     game.load.image('player', 'assets/player.png');
     game.load.image('tower', 'assets/tower.png');
@@ -83,7 +85,7 @@ Scene.Game.prototype = {
     // music.play();
     if (!started) {
       music = game.add.audio('music', 1, true);
-      music.play();
+      // music.play();
       started = true;
     }
     sndExplosion = game.add.audio('explosion');
@@ -100,13 +102,16 @@ Scene.Game.prototype = {
 
     this.createTilemap();
 
-    game.world.bringToTop(layerFundo);
+    if (layerFundo) {
+      game.world.bringToTop(layerFundo);
+    }
+
     game.world.bringToTop(towerGroup);
     game.world.bringToTop(layerFrente);
     game.world.bringToTop(bulletGroup);
     game.world.bringToTop(player);
 
-    debug = game.add.text(0, -999, '', { fill: '#ffffff', fontSize: '8pt' });
+    debug = game.add.text(0, 0, '', { fill: '#ffffff', fontSize: '8pt' });
   },
 
   update: function () {
@@ -129,8 +134,10 @@ Scene.Game.prototype = {
     map.setCollisionBetween(1, 899);
     game.physics.p2.convertTilemap(map, 'frente');
 
+    console.log('oioioi');
     map.objects.Objetos.forEach(function (obj) {
-      obj.y -= 21;
+      console.log(obj);
+      obj.y -= TILESIZE;
       if (obj.gid == FRAMES.PLAYER) { // player
         player = new Player(game, obj.x + 10, obj.y + 10);
         game.add.existing(player);
@@ -153,6 +160,8 @@ Scene.Game.prototype = {
         goal.body.category = 'goal';
         goal.body.kinematic = true;
         goal.body.data.shapes[0].sensor = true;
+      } else if (obj.gid == 901) {
+        // console.log(obj);
       }
     });
   },
@@ -167,12 +176,11 @@ function Player(game, x, y) {
   this.slowDownFactor = 0.5;
 
   game.physics.p2.enable(this);
-  this.body.damping = 1.0;
+  // this.body.damping = 1.0;
   this.body.onBeginContact.add(this.handleCollision, this); 
   this.body.fixedRotation = true;
 
-  // this.speed = 1.5 * 50;
-  this.acceleration = 5000;
+  this.speed = 3.0;
   this.connectedBullet = null;
   this.vel = { x: 0, y: 0 };
 }
@@ -205,41 +213,48 @@ Player.prototype.update = function () {
   debug.text += this.body.velocity.x.toFixed(1) + ", " + this.body.velocity.y.toFixed(1);
 }
 Player.prototype.handleInput = function () {
-  this.body.force.x = 0;
-  this.body.force.y = 0;
+  this.body.velocity.x = 0;
+  this.body.velocity.y = 0;
 
-  var curSpeed = this.acceleration * (btnSlow.isDown ? this.slowDownFactor : 1.0);
+  var curSpeed = this.speed * (btnSlow.isDown ? this.slowDownFactor : 1.0);
 
   if (setas.right.isDown || wasd.D.isDown) {
-    this.body.force.x += curSpeed;
+    this.body.velocity.x += curSpeed;
   }
   if (setas.left.isDown || wasd.A.isDown) {
-    this.body.force.x -= curSpeed;
+    this.body.velocity.x -= curSpeed;
   }
   if (setas.up.isDown || wasd.W.isDown) {
-    this.body.force.y -= curSpeed;
+    this.body.velocity.y -= curSpeed;
   }
   if (setas.down.isDown || wasd.S.isDown) {
-    this.body.force.y += curSpeed;
+    this.body.velocity.y += curSpeed;
   }
+
+  this.body.velocity.x *= TILESIZE;
+  this.body.velocity.y *= TILESIZE;
 }
 
 ///////
 
 function Tower(game, x, y, vel) {
   Phaser.Sprite.call(this, game, x, y, 'tower');
+  
+  this.delay = 0;
+  this.period = 2000;
+  
+  this.numBullets = 20;
+  this.phase = 0; // degrees
+
+  this.bulletSpeed = 2.5; // tiles per second
+  this.bulletMaxDistance = 5.5; // tiles
+  this.vel = vel;
+
+
+
   this.timeLastExplosion = this.game.time.now;
   this.firstExplosion = true;
   this.started = false;
-  this.period = 2000;
-  this.bullets = [];
-  this.numBullets = 20;
-  this.phase = 0; // degrees
-  this.bulletSpeed = 50;
-  this.bulletLifespan = 3000;
-  this.delay = 0;
-  this.vel = vel;
-
   this.game.physics.p2.enable(this);
   this.body.kinematic = true;
   this.body.data.shapes[0].sensor = true;
@@ -287,11 +302,11 @@ Tower.prototype.explode = function() {
 
   for (angle = phaseRadians; angle < 2 * Math.PI + phaseRadians; angle += 2.0 * Math.PI / this.numBullets) {
     vel = {
-      x: this.bulletSpeed * Math.cos(angle) + this.vel.x,
-      y: this.bulletSpeed * Math.sin(angle) + this.vel.y
+      x: this.bulletSpeed * TILESIZE * Math.cos(angle) + this.vel.x,
+      y: this.bulletSpeed * TILESIZE * Math.sin(angle) + this.vel.y
     };
-    bullet = new TowerBullet(game, this.centerX, this.centerY, vel);
-    bullet.lifespan = this.bulletLifespan;
+    bullet = new TowerBullet(game, this, vel);
+    bullet.maxDistance = this.bulletMaxDistance;
     bulletGroup.add(bullet);
   }
 
@@ -300,18 +315,18 @@ Tower.prototype.explode = function() {
 
 ////////
 
-function TowerBullet(game, x, y, vel) {
-  Phaser.Sprite.call(this, game, x, y, 'bullet');
+function TowerBullet(game, tower, vel) {
+  Phaser.Sprite.call(this, game, 0, 0, 'bullet');
+  this.tower = tower;
   this.vel = vel;
-  this.lifespan = 6000;
   this.creationTime = this.game.time.now;
 
   this.game.physics.p2.enable(this);
   this.body.category = 'bullet'
   this.body.kinematic = true;
   this.body.data.shapes[0].sensor = true;
-  this.body.x = x;
-  this.body.y = y;
+  this.body.x = this.tower.centerX;
+  this.body.y = this.tower.centerY;
   this.body.velocity.x = vel.x;
   this.body.velocity.y = vel.y;
 }
@@ -323,9 +338,13 @@ TowerBullet.prototype.isOutOfBounds = function () {
     this.centerY < 0 || this.centerY > this.game.height;
 }
 TowerBullet.prototype.isLifespanComplete = function () {
-  return this.game.time.now - this.creationTime > this.lifespan;
+  var dist = Phaser.Math.distance(this.centerX, this.centerY, this.tower.centerX, this.tower.centerY);
+  return dist > this.tower.bulletMaxDistance * TILESIZE;
 }
 TowerBullet.prototype.update = function () {
+  if (this.isLifespanComplete()) {
+    this.destroy();
+  }
 }
 
 /////////////////////////////////////////////////////////
