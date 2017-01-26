@@ -8,7 +8,7 @@
 // - TODO: Ride the bullet to become closer of the targets
 // - When the player is caught, she can deattach by moving away from the bullet
 
-FIRST_LEVEL = 4;
+FIRST_LEVEL = 1;
 
 TILESIZE = 21;
 
@@ -70,6 +70,11 @@ Scene.Game.prototype = {
     game.load.image('player', 'assets/player.png');
     game.load.image('tower', 'assets/tower.png');
     game.load.image('bullet', 'assets/bullet.png');
+    
+    game.load.image('tower4.png', 'assets/tower4.png');
+    game.load.image('tower5.png', 'assets/tower5.png');
+    game.load.image('tower6.png', 'assets/tower6.png');
+    game.load.image('tower8.png', 'assets/tower8.png');
 
     setas = game.input.keyboard.createCursorKeys();
     wasd = {
@@ -118,6 +123,18 @@ Scene.Game.prototype = {
     debug.text = 'DEBUG: ';
   },
 
+  mapGidsToObjects: function () {
+    var mapping = {};
+
+    map.imagecollections.forEach(function (collection) {
+      collection.images.forEach(function (image) {
+        mapping[image.gid] = image;
+      });
+    });
+
+    return mapping;
+  },
+
   createTilemap: function () {
     try {
       map = game.add.tilemap('fase' + this.params.level);
@@ -125,6 +142,9 @@ Scene.Game.prototype = {
       game.state.start('win', true, false);
       return;
     }
+
+    var mapping = this.mapGidsToObjects();
+    console.log(mapping);
 
     map.addTilesetImage('spritesheet', 'spritesheet');
 
@@ -134,16 +154,15 @@ Scene.Game.prototype = {
     map.setCollisionBetween(1, 899);
     game.physics.p2.convertTilemap(map, 'frente');
 
-    console.log('oioioi');
     map.objects.Objetos.forEach(function (obj) {
-      console.log(obj);
-      obj.y -= TILESIZE;
+      // console.log(obj);
+      // obj.y -= TILESIZE;
       if (obj.gid == FRAMES.PLAYER) { // player
-        player = new Player(game, obj.x + 10, obj.y + 10);
+        player = new Player(game, obj.x + TILESIZE / 2, obj.y - TILESIZE / 2);
         game.add.existing(player);
       } else if (obj.gid == FRAMES.TOWER) { // tower
         var tower;
-        tower = new Tower(game, obj.x + 10, obj.y + 10, {x: 0.0, y: 0.0});
+        tower = new Tower(game, obj.x + TILESIZE / 2, obj.y - TILESIZE / 2, {x: 0.0, y: 0.0});
         tower.numBullets = 8;
         tower.timeLastExplosion = game.time.now - tower.period / 2;
         towerGroup.add(tower);
@@ -153,8 +172,19 @@ Scene.Game.prototype = {
             tower[k] = obj.properties[k];
           }
         }
+      } else if (obj.gid in mapping) {
+        var props = mapping[obj.gid];
+        if (props.image.startsWith('tower')) {
+          var tower;
+          var texture = game.cache.getBaseTexture(props.image);
+          console.log(obj.x);
+          console.log(texture.width/2);
+          tower = new Tower(game, obj.x + texture.width / 2, obj.y - texture.height / 2, {x: 0.0, y: 0.0});
+          tower.numBullets = parseInt(props.image[5], 10);
+          towerGroup.add(tower);
+        }
       } else if (obj.gid == FRAMES.GOAL) { //goal
-        var goal = game.add.sprite(obj.x + 10, obj.y + 10, 'spritesheet');
+        var goal = game.add.sprite(obj.x + TILESIZE / 2, obj.y - TILESIZE / 2, 'spritesheet');
         goal.frame = FRAMES.GOAL - 1;
         game.physics.p2.enable(goal);
         goal.body.category = 'goal';
@@ -171,6 +201,7 @@ Scene.Game.prototype = {
 
 function Player(game, x, y) {
   Phaser.Sprite.call(this, game, x, y, 'player');
+  this.anchor = new Phaser.Point(0.5, 0.5);
   // this.frame = 171 - 1;
   
   this.slowDownFactor = 0.5;
@@ -239,6 +270,7 @@ Player.prototype.handleInput = function () {
 
 function Tower(game, x, y, vel) {
   Phaser.Sprite.call(this, game, x, y, 'tower');
+  this.anchor = new Phaser.Point(0.5, 0.5);
   
   this.delay = 0;
   this.period = 2000;
@@ -317,6 +349,7 @@ Tower.prototype.explode = function() {
 
 function TowerBullet(game, tower, vel) {
   Phaser.Sprite.call(this, game, 0, 0, 'bullet');
+  this.anchor = new Phaser.Point(0.5, 0.5);
   this.tower = tower;
   this.vel = vel;
   this.creationTime = this.game.time.now;
