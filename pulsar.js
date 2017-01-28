@@ -8,7 +8,7 @@
 // - TODO: Ride the bullet to become closer of the targets
 // - When the player is caught, she can deattach by moving away from the bullet
 
-FIRST_LEVEL = 1;
+FIRST_LEVEL = 4;
 
 TILESIZE = 21;
 
@@ -75,6 +75,7 @@ Scene.Game.prototype = {
     game.load.image('tower5.png', 'assets/tower5.png');
     game.load.image('tower6.png', 'assets/tower6.png');
     game.load.image('tower8.png', 'assets/tower8.png');
+    game.load.image('tower16.png', 'assets/tower16.png');
 
     setas = game.input.keyboard.createCursorKeys();
     wasd = {
@@ -111,8 +112,8 @@ Scene.Game.prototype = {
       game.world.bringToTop(layerFundo);
     }
 
-    game.world.bringToTop(towerGroup);
     game.world.bringToTop(layerFrente);
+    game.world.bringToTop(towerGroup);
     game.world.bringToTop(bulletGroup);
     game.world.bringToTop(player);
 
@@ -177,11 +178,29 @@ Scene.Game.prototype = {
         if (props.image.startsWith('tower')) {
           var tower;
           var texture = game.cache.getBaseTexture(props.image);
-          console.log(obj.x);
-          console.log(texture.width/2);
-          tower = new Tower(game, obj.x + texture.width / 2, obj.y - texture.height / 2, {x: 0.0, y: 0.0});
-          tower.numBullets = parseInt(props.image[5], 10);
+          
+          if (!obj.rotation) {
+            obj.rotation = 0;
+          }
+          var rotationRad = Phaser.Math.degToRad(-obj.rotation);
+          var midPoint = {
+            x: obj.x - 0.5 * texture.height * Math.sin(rotationRad) + 0.5 * texture.width * Math.cos(rotationRad),
+            y: obj.y - 0.5 * texture.width * Math.sin(rotationRad) - 0.5 * texture.height * Math.cos(rotationRad)
+          }
+
+          tower = new Tower(game, midPoint.x, midPoint.y, {x: 0.0, y: 0.0});
+          var numBulletsStr = props.image.replace('tower', '').replace('.png', '');
+          tower.numBullets = parseInt(numBulletsStr, 10);
+          tower.phase = obj.rotation;
+          tower.body.rotation = Phaser.Math.degToRad(obj.rotation);
+          gtower = tower;
           towerGroup.add(tower);
+
+        if (obj.properties) {
+          for (var k in obj.properties) {
+            tower[k] = obj.properties[k];
+          }
+        }
         }
       } else if (obj.gid == FRAMES.GOAL) { //goal
         var goal = game.add.sprite(obj.x + TILESIZE / 2, obj.y - TILESIZE / 2, 'spritesheet');
